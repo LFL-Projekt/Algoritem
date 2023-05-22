@@ -37,3 +37,53 @@ def lbp(slika):
     lbp_slika = lbp_vrednosti
 
     return lbp_slika
+
+def hog(sivinska_slika, velikost_celice, velikost_bloka, stevilo_predalov):
+    visina, sirina = sivinska_slika.shape
+
+    gx = np.zeros_like(sivinska_slika, dtype=np.float32)
+    gy = np.zeros_like(sivinska_slika, dtype=np.float32)
+
+    gx[:, :-1] = np.diff(sivinska_slika, n=1, axis=1)
+    gy[:-1, :] = np.diff(sivinska_slika, n=1, axis=0)
+
+    gradient_magnitude = np.sqrt(gx ** 2 + gy ** 2)
+    gradient_orientacija = np.arctan2(gy, gx) * (180.0 / np.pi) % 180.0
+
+    stevilo_celic_x = sirina // velikost_celice
+    stevilo_celic_y = visina // velikost_celice
+
+    histogram = np.zeros((stevilo_celic_y, stevilo_celic_x, stevilo_predalov))
+
+    for y in range(stevilo_celic_y):
+        for x in range(stevilo_celic_x):
+            y_zacetek = y * velikost_celice
+            y_konec = (y + 1) * velikost_celice
+            x_zacetek = x * velikost_celice
+            x_konec = (x + 1) * velikost_celice
+
+            celica_magnitude = gradient_magnitude[y_zacetek:y_konec, x_zacetek:x_konec]
+            celica_orientacija = gradient_orientacija[y_zacetek:y_konec, x_zacetek:x_konec]
+
+            hist, _ = np.histogram(celica_orientacija, bins=stevilo_predalov, range=(0, 180),
+                                   weights=celica_magnitude)
+
+            histogram[y, x, :] = hist / np.sqrt(np.sum(hist ** 2) + 1e-6)
+
+    korak_bloka = velikost_celice // velikost_bloka
+    stevilo_blokov_x = (stevilo_celic_x - velikost_bloka) // korak_bloka + 1
+    stevilo_blokov_y = (stevilo_celic_y - velikost_bloka) // korak_bloka + 1
+
+    hog_opis = np.zeros((stevilo_blokov_y, stevilo_blokov_x, velikost_bloka, velikost_bloka, stevilo_predalov))
+
+    for y in range(stevilo_blokov_y):
+        for x in range(stevilo_blokov_x):
+            y_zacetek = y * korak_bloka
+            y_konec = y_zacetek + velikost_bloka
+            x_zacetek = x * korak_bloka
+            x_konec = x_zacetek + velikost_bloka
+
+            blok_histogram = histogram[y_zacetek:y_konec, x_zacetek:x_konec, :]
+            hog_opis[y, x, :, :, :] = blok_histogram / np.sqrt(np.sum(blok_histogram ** 2) + 1e-6)
+
+    return hog_opis.flatten()
