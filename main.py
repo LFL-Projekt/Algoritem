@@ -87,3 +87,29 @@ def hog(sivinska_slika, velikost_celice, velikost_bloka, stevilo_predalov):
             hog_opis[y, x, :, :, :] = blok_histogram / np.sqrt(np.sum(blok_histogram ** 2) + 1e-6)
 
     return hog_opis.flatten()
+
+# Enkodirajte oznake z eno-hot kodiranjem
+y_train_encoded = tf.keras.utils.to_categorical(y_train, 2)
+y_test_encoded = tf.keras.utils.to_categorical(y_test, 2)
+
+# Definirajte arhitekturo nevronske mreže
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    tf.keras.layers.Dense(2, activation='softmax')
+])
+
+# Skompilirajte model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Učite model
+model.fit(X_train, y_train_encoded, epochs=10, batch_size=32, validation_data=(X_test, y_test_encoded))
+
+# Ocena modela
+test_loss, test_acc = model.evaluate(X_test, y_test_encoded)
+print('Test accuracy:', test_acc)
+
+# Napovedovanje značilk
+predictions = model.predict(vect)
